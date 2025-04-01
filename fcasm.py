@@ -131,7 +131,7 @@ for i, line in enumerate(raw):
         continue
     if line.endswith(':'):
         label = line[:-1]
-        if not label.isalnum():
+        if not label.replace('_', '0').isalnum():
             error(i, f'Label `@{label}` is not alphanumeric')
         if label in labels:
             error(i, f'Label `@{label}` already declared in line {labels[label][0]}')
@@ -168,7 +168,7 @@ for i, line in enumerate(raw):
         args = []
     if funcname.startswith('@'):
         funcname = funcname[1:]
-        if not funcname.isalnum():
+        if not funcname.replace('_', '0').isalnum():
             error(i, f'Label `@{funcname}` is not alphanumeric')
         if funcname in labels:
             func = labels[funcname][1]
@@ -202,7 +202,7 @@ for i, line in enumerate(raw):
         if not ret.startswith('$'):
             error(i, f'Expected $var, got `{ret}`')
         ret = ret[1:]
-        if not ret.isalnum():
+        if not ret.replace('_', '0').isalnum():
             error(i, f'Variable `${ret}` is not alphanumeric')
         if not ret in vars:
             vars.append(ret)
@@ -210,7 +210,7 @@ for i, line in enumerate(raw):
     for j, arg in enumerate(args):
         if arg.startswith('$'):
             arg = arg[1:]
-            if not arg.isalnum():
+            if not arg.replace('_', '0').isalnum():
                 error(i, f'Variable `${arg}` is not alphanumeric')
             if not arg in vars:
                 vars.append(arg)
@@ -218,7 +218,7 @@ for i, line in enumerate(raw):
         elif arg.startswith('@'):
             arg = arg[1:]
             args[j] = arg
-            if not arg.isalnum():
+            if not arg.replace('_', '0').isalnum():
                 error(i, f'Label `@{arg}` is not alphanumeric')
             if arg in labels:
                 args[j] = labels[arg][1]
