@@ -1,0 +1,58 @@
+$x = x
+$y = y
+$scale = id 10 # grid scale
+$frame = frame
+if $frame @redraw @build
+
+build:
+    # grid corners
+    $x0 = div $x $scale
+    $fx = fpart $x0
+    $x0 = ipart $x0
+    $x1 = add $x0 1
+    $y0 = div $y $scale
+    $fy = fpart $y0
+    $y0 = ipart $y0
+    $y1 = add $y0 1
+    # 4 corner values
+    $a00 = @getrand $x0 $y0
+    $a01 = @getrand $x0 $y1
+    $a10 = @getrand $x1 $y0
+    $a11 = @getrand $x1 $y1
+    $fx = @ease $fx
+    $fy = @ease $fy
+    $1mfx = sub 1 $fx
+    $1mfy = sub 1 $fy
+    $a00 = mul $a00 $1mfx
+    $a10 = mul $a10 $fx
+    $r1 = add $a00 $a10
+    $r1 = mul $r1 $1mfy
+    $a01 = mul $a01 $1mfx
+    $a11 = mul $a11 $fx
+    $r2 = add $a01 $a11
+    $r2 = mul $r2 $fy
+    $r = add $r1 $r2
+    $r = mul $r $r
+    $c = mul $r 0xFF
+    $c = int $c
+    $c = mul $c 0x010101
+    exit $c
+
+redraw: # do nothing
+    $c = pixels $x $y
+    exit $c
+
+getrand: # $x $y
+    $seed = shl $0 16
+    $seed = bitor $seed $1
+    setseed $seed
+    $r = random
+    ret $r
+
+ease: # $x -> 3x² - 2x³
+    $x2 = mul $0 $0
+    $x3 = mul $x2 $0
+    $3x2 = mul $x2 3
+    $2x3 = mul $x3 2
+    $r = sub $3x2 $2x3
+    ret $r
