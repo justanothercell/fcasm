@@ -1,0 +1,21 @@
+syntax fcasm "\.fcasm$"
+magic "FCASM script"
+comment "#"
+
+color yellow "\<(x|y|w|h|input|frame|pixels)\>"
+
+color green "[0-9A-Za-z_]+:"
+color green "@[0-9A-Za-z_]+"
+
+color brightcyan "\$[0-9A-Za-z_]+"
+
+color brightmagenta "\<(if|exit|ret|jmp)\>"
+
+color brightred "(^|[[:blank:]])#.*"
+
+# Trailing whitespace.
+color ,green "[[:space:]]+$"
+
+color blue "\<[0-9]+\>"
+color blue "\<0x[0-9A-Fa-f]+\>"
+color blue "\<[0-9]*\.[0-9]+\>"
