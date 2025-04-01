@@ -1,0 +1,61 @@
+$x = x
+$y = y
+$w = w
+$i = frame
+
+if $i @simulate @setup
+
+simulate:
+    $active = eq $i $y
+    if $active @active_row @inactive_row
+active_row:
+    $u = sub $y 1
+    $middle = pixels $x $u
+    $middle = bitand $middle 0b010
+    if $x @real_left @dummy_left # x != 0?
+dummy_left: # would be out of bounds
+    $left = id 0
+    jmp @left_end
+real_left:
+    $l = sub $x 1
+    $left = pixels $l $u
+    $left = bitand $left 0b100
+left_end:
+    $r = add $x 1
+    $onedge = eq $r $w # x+1 == w?
+    if $onedge @dummy_right @real_right
+dummy_right: # would be out of bounds
+    $right = id 0
+    jmp @right_end
+real_right:
+    $right = pixels $r $u
+    $right = bitand $right 0b001
+right_end:
+    $pat = bitor $left $middle
+    $pat = bitor $pat $right
+    if $pat @not000 @zero # pat != 0b000?
+not000:
+    $100 = eq $pat 0b100
+    if $100 @one @not100
+not100:
+    if $left @zero @one
+zero:
+    exit 0
+one:
+    exit 0xFFFFFF
+
+inactive_row:
+    $c = pixels $x $y
+    exit $c
+
+setup:
+    $m = div $w 2
+    $m = int $m
+    $is_middle = eq $m $x
+    if $is_middle @setup_mid @setup_other
+setup_mid:
+    if $y @setup_other @setup_seed
+setup_seed:
+    exit 0xFFFFFF
+setup_other:
+    exit 0
