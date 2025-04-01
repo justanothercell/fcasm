@@ -2,6 +2,7 @@ import sys
 import math
 import random
 import inspect
+from time import time
 from time import sleep
 from term import Term
 
@@ -55,6 +56,9 @@ BUILTINS = {
 width, height = 24, 24
 fps = 10
 dry = False
+benchmark = False
+benchcount = 1
+benchwarm = 0
 
 sargs = iter(sys.argv)
 
@@ -73,12 +77,22 @@ try:
             fps = float(next(sargs))
         elif arg == '--dry':
             dry = True
+        elif arg == '--bench':
+            benchmark = True
+        elif arg == '--bcount':
+            benchcount = int(next(sargs))
+        elif arg == '--bwarm':
+            benchwarm = int(next(sargs))
         else:
-            raise Exception
-except:
+            raise Exception(f'Unknown argument `{arg}`')
+except Exception as e:
+    print(e)
     print(f'{thisfile} <code.fcasm> [args...]')
     print(f'\t-s/--size <w> <h>')
     print(f'\t--fps <fps>')
+    print(f'\t--bench      | benchmark evaluation')
+    print(f'\t--bcount <n> | how many frames to benchmark')
+    print(f'\t--bwarm  <n> | how many frames to warm up before benchmarking')
     exit()
 
 
@@ -121,7 +135,10 @@ for i, line in enumerate(raw):
         if label in forward_labels:
             for line, index, argdex in forward_labels[label]:
                 if argdex >= 0: # replace argument
-                    code[index][3][argdex] = len(code)
+                    cline, cret, (cfuncname, cfunc), cargs = code[index]
+                    cargs = list(cargs)
+                    cargs[argdex] = len(code)
+                    code[index] = cline, cret, (cfuncname, cfunc), tuple(cargs)
                 else: # argdex = -1: replace function
                     cline, cret, (cfuncname, cfunc), cargs = code[index]
                     cfunc = len(code)
@@ -222,7 +239,7 @@ for i, line in enumerate(raw):
                 error(i, f'Invalid base 2 int literal: `{arg}`')
         else:
             error(i, f'Expected $var, @label or number, got `{arg}`')
-    code.append((i, ret, (funcname, func), args))
+    code.append((i, ret, (funcname, func), tuple(args)))
 
 if len(forward_labels) > 0:
     name, [(line, index, argdex), *rest] = next(iter(forward_labels.items()))
@@ -246,18 +263,17 @@ input_char = 0
 
 def eval_code(x, y):
     stack = [(-1, None, [None] * len(vars))]
-    def arg(x):
-        if type(x) == Var:
-            x = stack[-1][2][x.index]
-            if x is None:
-                error(i, f'Variable `{vars[x]}` no associated with a value')
-        return x
     ip = 0
-    l = 0
     try:
         while True:
-            i, ret, (fname, func), args = code[ip]
-            args = [arg(x) for x in args]
+            i, ret, (fname, func), rawargs = code[ip]
+            args = []
+            for x in rawargs:
+                if type(x) == Var:
+                    x = stack[-1][2][x.index]
+                    if x is None:
+                        error(i, f'Variable `{vars[x]}` no associated with a value', keepalive=True)
+                args.append(x)
             ip += 1
             if type(func) == int: # dynamic func call
                 stack.append((ip, ret, [None] * len(vars)))
@@ -266,7 +282,7 @@ def eval_code(x, y):
                 ip = func
             elif fname == 'ret':
                 if len(stack) <= 1:
-                    error(i, 'Cannot return outside function')
+                    error(i, 'Cannot return outside function', keepalive=True)
                 r = args[0]
                 ip, ret, old_vars = stack.pop()
                 stack[-1][2][ret.index] = r
@@ -283,7 +299,7 @@ def eval_code(x, y):
                 x = args[0]
                 y = args[1]
                 if x < 0 or y < 0 or x >= width or y >= height:
-                    error(i, f'pixels coordinate {(x, y)} out of bounds for size {(width, height)}')
+                    error(i, f'pixels coordinate {(x, y)} out of bounds for size {(width, height)}', keepalive=True)
                 a, r, g, b = pixels[y][x]
                 stack[-1][2][ret.index] = (a << 24) | (r << 16) | (g << 8) | (b << 0)
             elif fname == 'x':
@@ -310,6 +326,34 @@ def calc_pixel(x, y):
     ret = int(eval_code(x, y))
     a, r, g, b = (ret >> 24) & 0xFF, (ret >> 16) & 0xFF, (ret >> 8) & 0xFF, (ret >> 0) & 0xFF
     new_pixels[y][x] = a, r, g, b
+
+if benchmark:
+    if benchwarm > 0:
+        print('Warming up...')
+        for _ in range(benchwarm):
+            for y in range(height):
+                for x in range(width):
+                    calc_pixel(x, y)
+        pixels, new_pixels = new_pixels, pixels
+        framecount += 1
+        print(f'Warmed up {benchwarm} frames')
+    print(f'Timing...')
+    start = time()
+    for _ in range(benchcount):
+        for y in range(height):
+            for x in range(width):
+                calc_pixel(x, y)
+    pixels, new_pixels = new_pixels, pixels
+    framecount += 1
+    end = time()
+    print(f'Timed {benchcount} frame(s)')
+    if benchcount == 1:
+        print(f'Evaluating frame took {end-start}s')
+    else:
+        print(f'Evaluating frames took {end-start}s')
+        print(f'\t{(end-start) / benchcount}s per frame')
+        print(f'\t{1/((end-start) / benchcount)} fps')
+    exit()
 
 first = True
 with Term() as term:
