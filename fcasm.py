@@ -279,9 +279,10 @@ def eval_code(x, y):
             args = []
             for x in rawargs:
                 if type(x) == Var:
-                    x = stack[-1][2][x.index]
-                    if x is None:
-                        error(i, f'Variable `{vars[x]}` no associated with a value', keepalive=True)
+                    xr = stack[-1][2][x.index]
+                    if xr is None:
+                        error(i, f'Variable `{vars[x.index]}` no associated with a value', keepalive=True)
+                    x = xr
                 args.append(x)
             ip += 1
             if type(func) == int: # dynamic func call
@@ -295,7 +296,8 @@ def eval_code(x, y):
                         error(i, 'Cannot return outside function', keepalive=True)
                     r = args[0]
                     ip, ret, old_vars = stack.pop()
-                    stack[-1][2][ret.index] = r
+                    if ret is not None:
+                        stack[-1][2][ret.index] = r
                 elif fname == 'exit':
                     return args[0]
                 elif fname == 'jmp':
@@ -311,28 +313,37 @@ def eval_code(x, y):
                     if x < 0 or y < 0 or x >= width or y >= height:
                         error(i, f'pixels coordinate {(x, y)} out of bounds for size {(width, height)}', keepalive=True)
                     a, r, g, b = pixels[y][x]
-                    stack[-1][2][ret.index] = (a << 24) | (r << 16) | (g << 8) | (b << 0)
+                    if ret is not None:
+                        stack[-1][2][ret.index] = (a << 24) | (r << 16) | (g << 8) | (b << 0)
                 elif fname == 'x':
-                    stack[-1][2][ret.index] = x
+                    if ret is not None:
+                        stack[-1][2][ret.index] = x
                 elif fname == 'y':
-                    stack[-1][2][ret.index] = y
+                    if ret is not None:
+                        stack[-1][2][ret.index] = y
                 elif fname == 'w':
-                    stack[-1][2][ret.index] = width
+                    if ret is not None:
+                        stack[-1][2][ret.index] = width
                 elif fname == 'h':
-                    stack[-1][2][ret.index] = height
+                    if ret is not None:
+                        stack[-1][2][ret.index] = height
                 elif fname == 'frame':
-                    stack[-1][2][ret.index] = framecount
+                    if ret is not None:
+                        stack[-1][2][ret.index] = framecount
                 elif fname == 'input':
-                    stack[-1][2][ret.index] = input_char
+                    if ret is not None:
+                        stack[-1][2][ret.index] = input_char
                 elif fname == 'argc':
-                    stack[-1][2][ret.index] = len(args)
+                    if ret is not None:
+                        stack[-1][2][ret.index] = len(args)
                 else:
                     assert False, "unreachable"
             else:
                 r = func(*args)
                 if r == None:
                     r = 0
-                stack[-1][2][ret.index] = r
+                if ret is not None:
+                    stack[-1][2][ret.index] = r
     except Exception as e:
         error(i, f'{e}', keepalive=True)
 
