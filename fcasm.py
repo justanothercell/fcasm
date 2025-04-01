@@ -1,3 +1,4 @@
+import os
 import sys
 import math
 import random
@@ -5,6 +6,8 @@ import inspect
 from time import time
 from time import sleep
 from term import Term
+
+os.system('') # enable ansi for windows
 
 BUILTINS = {
     'sin': math.sin, 'sinh': math.sinh, 'asin': math.asin, 'asinh': math.asinh,
@@ -40,17 +43,18 @@ BUILTINS = {
 
     'id': lambda x: x,
 
-    'ret': lambda r: print('dummy implementation'),
-    'exit': lambda color: print('dummy implementation'),
-    'if': lambda predicate, then_branch, else_branch: print('dummy implementation'),
-    'jmp': lambda label: print('dummy implementation'),
-    'pixels': lambda x, y: print('dummy implementation'),
-    'x': lambda: print('dummy implementation'),
-    'y': lambda: print('dummy implementation'),
-    'w': lambda: print('dummy implementation'),
-    'h': lambda: print('dummy implementation'),
-    'frame': lambda: print('dummy implementation'),
-    'input': lambda: print('dummy implementation'),
+    'ret': 1,
+    'exit': 1,
+    'if': 3,
+    'jmp': 1,
+    'pixels': 2,
+    'x': 0,
+    'y': 0,
+    'w': 0,
+    'h': 0,
+    'frame': 0,
+    'input': 0,
+    'argc': 0,
 }
 
 width, height = 24, 24
@@ -177,18 +181,23 @@ for i, line in enumerate(raw):
         if funcname not in BUILTINS:
             error(i, f'No such function `{funcname}`')
         func = BUILTINS[funcname]
-        sig = inspect.signature(func)
-        params = list(sig.parameters.items())
-        if len(params) > 0:
-            if params[-1][1].kind == inspect.Parameter.VAR_POSITIONAL:
-                if len(args) < len(params):
-                    error(i, f'Function `{funcname}` expects at least {len(params)} args, got {len(args)}')
-            else:
-                if len(args) != len(params):
-                    error(i, f'Function `{funcname}` expects {len(params)} args, got {len(args)}')
+        if type(func) == int:
+            if len(args) != func:
+                error(i, f'Function `{funcname}` expects {func} args, got {len(args)}')
+            func = funcname
         else:
-            if len(args) > 0:
-                error(i, f'Function `{funcname}` expects no args, got {len(args)}')
+            sig = inspect.signature(func)
+            params = list(sig.parameters.items())
+            if len(params) > 0:
+                if params[-1][1].kind == inspect.Parameter.VAR_POSITIONAL:
+                    if len(args) < len(params):
+                        error(i, f'Function `{funcname}` expects at least {len(params)} args, got {len(args)}')
+                else:
+                    if len(args) != len(params):
+                        error(i, f'Function `{funcname}` expects {len(params)} args, got {len(args)}')
+            else:
+                if len(args) > 0:
+                    error(i, f'Function `{funcname}` expects no args, got {len(args)}')
     if ret is not None:
         if not ret.startswith('$'):
             error(i, f'Expected $var, got `{ret}`')
@@ -280,40 +289,45 @@ def eval_code(x, y):
                 for j, v in enumerate(args):
                     stack[-1][2][vars.index(str(j))] = v
                 ip = func
-            elif fname == 'ret':
-                if len(stack) <= 1:
-                    error(i, 'Cannot return outside function', keepalive=True)
-                r = args[0]
-                ip, ret, old_vars = stack.pop()
-                stack[-1][2][ret.index] = r
-            elif fname == 'exit':
-                return args[0]
-            elif fname == 'jmp':
-                ip = args[0]
-            elif fname == 'if':
-                cond = args[0]
-                then = args[1]
-                otherwise = args[2]
-                ip = then if cond else otherwise
-            elif fname == 'pixels':
-                x = args[0]
-                y = args[1]
-                if x < 0 or y < 0 or x >= width or y >= height:
-                    error(i, f'pixels coordinate {(x, y)} out of bounds for size {(width, height)}', keepalive=True)
-                a, r, g, b = pixels[y][x]
-                stack[-1][2][ret.index] = (a << 24) | (r << 16) | (g << 8) | (b << 0)
-            elif fname == 'x':
-                stack[-1][2][ret.index] = x
-            elif fname == 'y':
-                stack[-1][2][ret.index] = y
-            elif fname == 'w':
-                stack[-1][2][ret.index] = width
-            elif fname == 'h':
-                stack[-1][2][ret.index] = height
-            elif fname == 'frame':
-                stack[-1][2][ret.index] = framecount
-            elif fname == 'input':
-                stack[-1][2][ret.index] = input_char
+            elif type(func) == str:
+                if fname == 'ret':
+                    if len(stack) <= 1:
+                        error(i, 'Cannot return outside function', keepalive=True)
+                    r = args[0]
+                    ip, ret, old_vars = stack.pop()
+                    stack[-1][2][ret.index] = r
+                elif fname == 'exit':
+                    return args[0]
+                elif fname == 'jmp':
+                    ip = args[0]
+                elif fname == 'if':
+                    cond = args[0]
+                    then = args[1]
+                    otherwise = args[2]
+                    ip = then if cond else otherwise
+                elif fname == 'pixels':
+                    x = args[0]
+                    y = args[1]
+                    if x < 0 or y < 0 or x >= width or y >= height:
+                        error(i, f'pixels coordinate {(x, y)} out of bounds for size {(width, height)}', keepalive=True)
+                    a, r, g, b = pixels[y][x]
+                    stack[-1][2][ret.index] = (a << 24) | (r << 16) | (g << 8) | (b << 0)
+                elif fname == 'x':
+                    stack[-1][2][ret.index] = x
+                elif fname == 'y':
+                    stack[-1][2][ret.index] = y
+                elif fname == 'w':
+                    stack[-1][2][ret.index] = width
+                elif fname == 'h':
+                    stack[-1][2][ret.index] = height
+                elif fname == 'frame':
+                    stack[-1][2][ret.index] = framecount
+                elif fname == 'input':
+                    stack[-1][2][ret.index] = input_char
+                elif fname == 'argc':
+                    stack[-1][2][ret.index] = len(args)
+                else:
+                    assert False, "unreachable"
             else:
                 r = func(*args)
                 if r == None:
