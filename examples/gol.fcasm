@@ -1,0 +1,56 @@
+$frame = frame
+$x = x
+$y = y
+$W = w
+$H = h
+
+if $frame @iterate @setup
+
+setup:
+    $state = randint 0 2
+    jmp @end
+
+iterate:
+    $w = sub $x 1
+    $w = mod $w $W 
+    $e = add $x 1
+    $e = mod $e $W
+    $n = sub $y 1
+    $n = mod $n $H
+    $s = add $y 1
+    $s = mod $s $H
+
+    $state = pixels $x $y
+    $state = eq $state 0xFFFFFF
+    $wn = pixels $w $n 
+    $wn = eq $wn 0xFFFFFF
+    $xn = pixels $x $n 
+    $xn = eq $xn 0xFFFFFF
+    $en = pixels $e $n 
+    $en = eq $en 0xFFFFFF
+    $wy = pixels $w $y 
+    $wy = eq $wy 0xFFFFFF
+    $ey = pixels $e $y 
+    $ey = eq $ey 0xFFFFFF
+    $ws = pixels $w $s 
+    $ws = eq $ws 0xFFFFFF
+    $xs = pixels $x $s 
+    $xs = eq $xs 0xFFFFFF
+    $es = pixels $e $s 
+    $es = eq $es 0xFFFFFF
+
+    $neighbors = sum $wn $xn $en $wy $ey $ws $xs $es
+
+    if $state @alive @dead
+alive:
+    $n2 = eq $neighbors 2
+    $n3 = eq $neighbors 3
+    $state = or $n2 $n3 # 2 or 3 -> alive
+    jmp @end
+dead:
+    $state = eq $neighbors 3 # exactly 3 -> alive
+    jmp @end
+
+end:
+    $c = mul $state 0xFFFFFF
+    exit $c

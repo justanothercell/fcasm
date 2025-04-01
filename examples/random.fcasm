@@ -1,0 +1,2 @@
+$r = randint 0 0xFFFFFF
+exit $r

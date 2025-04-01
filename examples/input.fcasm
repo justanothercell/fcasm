@@ -1,0 +1,73 @@
+# To store information we are hiding data in the invisible
+# "alpha channel" of the color: 0xAARRGGBB.
+
+$frame = frame
+$x = x
+$y = y
+$w = w
+$h = h
+
+if $frame @run @setup
+
+setup: # are we the spawn pixel?
+    $xc = eq $x 10
+    $yc = eq $y 10
+    $cc = and $xc $yc
+    if $cc @setupisplayer @end
+setupisplayer:
+    exit 0x0000FF00
+
+run:
+    $color = pixels $x $y
+    $isplayerandstationary = eq $color 0x0000FF00
+    if $isplayerandstationary @handleinput @handlemovement
+handleinput:
+    $i = input
+    $w = eq $i 119
+    if $w @runw @runnw
+runnw:
+    $a = eq $i 97
+    if $a @runa @runna
+runna:
+    $s = eq $i 115
+    if $s @runs @runns
+runns:
+    $d = eq $i 100
+    if $d @rund @noinput
+runw:
+    exit 0x0100FF00
+runa:
+    exit 0x0200FF00
+runs:
+    exit 0x0300FF00
+rund:
+    exit 0x0400FF00
+noinput:
+    exit $color
+
+handlemovement:
+    $yd = add $y 1
+    $yd = mod $yd $h
+    $color = pixels $x $yd
+    $up = eq $color 0x0100FF00
+    if $up @handleinput @nomoveup
+nomoveup:
+    $yu = sub $y 1
+    $yu = mod $yu $h
+    $color = pixels $x $yu
+    $down = eq $color 0x0300FF00
+    if $down @handleinput @nomovedown
+nomovedown:
+    $xl = sub $x 1
+    $xl = mod $xl $w
+    $color = pixels $xl $y
+    $right = eq $color 0x0400FF00
+    if $right @handleinput @nomoveright
+nomoveright:
+    $xr = add $x 1
+    $xr = mod $xr $w
+    $color = pixels $xr $y
+    $left = eq $color 0x0200FF00
+    if $left @handleinput @end
+end:
+    exit 0x000000
